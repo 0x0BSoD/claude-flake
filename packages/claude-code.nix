@@ -51,13 +51,18 @@ stdenvNoCC.mkDerivation {
 
     # Nix owns the version, so the self-updater and install-method checks are
     # disabled. Plugins may still update themselves into ~/.claude.
+    #
+    # The "system" cert store only reads CA files (SSL_CERT_FILE/SSL_CERT_DIR).
+    # On NixOS that bundle includes security.pki certificates, but on macOS it
+    # is Nix's bundle and misses roots that live only in the Keychain (e.g. a
+    # corporate TLS-inspection CA), so macOS keeps the upstream default.
     wrapProgram $out/bin/claude \
       --set DISABLE_AUTOUPDATER 1 \
       --set-default FORCE_AUTOUPDATE_PLUGINS 1 \
       --set DISABLE_INSTALLATION_CHECKS 1 \
       --set USE_BUILTIN_RIPGREP 0 \
-      --set-default CLAUDE_CODE_CERT_STORE system \
       ${lib.optionalString stdenvNoCC.hostPlatform.isLinux ''
+        --set-default CLAUDE_CODE_CERT_STORE system \
         --prefix LD_LIBRARY_PATH : ${lib.makeLibraryPath [ alsa-lib ]} \
       ''}--prefix PATH : ${
         lib.makeBinPath (
